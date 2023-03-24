@@ -1,0 +1,285 @@
+---
+title: "Time series quarterly analysis"
+output: pdf_document
+date: "2023-03-23"
+---
+# import library
+```{r setup, include=FALSE}
+# truoc khi thay data + run all can sua data dung format, sua start_q la thoi gian bat dau, sua model 3, model 8 neu data khong am
+knitr::opts_chunk$set(echo = TRUE)
+library(Hmisc)
+library(tidyverse)
+library(Metrics)
+library(astsa)
+library(tseries)
+library(readxl)
+library(tsutils)
+library(forecast)
+```
+
+# import data + plot series:
+```{r}
+clean_hpg <- read_excel("D:/Time series/clean_hpg_full.xlsx")
+
+start_q <- 2007 #2007Q1
+
+
+ts_netp <- ts(clean_hpg$`Net Profit`, start = c(start_q, 1), freq = 4)
+t <- seq_along(ts_netp)
+# prediction data for 2023
+t_pred <- seq(length(t) + 2, length(t) * 2 + 1)
+seas <- seasdummy(63, 4) # 63 = length(ts)
+predict_data <- data.frame(t = t_pred, seas1 = seas[, 1], seas2 = seas[, 2], seas3 = seas[, 3])
+
+
+head(clean_hpg)
+```
+
+```{r}
+plot.ts(ts_netp)
+```
+
+# Model 1: Linear time trend (series ~ time)
+For each model:
+1. fit + summarize model \
+2. explain coefficients if possible \
+3. Graph actual, fitted value, forecast value \
+4. Model evaluation: F-test (overall significant), coefficients' significance, R-square \
+5. Comments on RMSE, MAPE \
+```{r}
+model1 <- lm(ts_netp ~ t)
+summary(model1)
+```
+```{r}
+plot(ts_netp, xlim = c(start_q - 1, 2024))
+fitted1 <- ts(fitted(model1), start = c(2007, 1), freq = 4)
+prediction1 <- ts(predict(model1, newdata = predict_data)[1:4], start = c(2023, 1), freq = 4)
+lines(fitted1, col = "red")
+lines(prediction1, col = "blue")
+```
+```{r}
+# RMSE, MAPE all observation:
+rmse(ts_netp, fitted(model1))
+mape(ts_netp, fitted(model1))
+```
+```{r}
+AIC(model1)
+```
+
+```{r}
+# RMSE, MAPE last 4 observations:
+rmse(ts_netp[(length(ts_netp) - 3): length(ts_netp)], fitted(model1)[(length(ts_netp) - 3): length(ts_netp)])
+mape(ts_netp[(length(ts_netp) - 3): length(ts_netp)], fitted(model1)[(length(ts_netp) - 3): length(ts_netp)])
+```
+
+
+
+# Model 2: Log time trend (series ~ log(time))
+```{r}
+
+model2 <- lm(ts_netp ~ log(t))
+summary(model2)
+```
+```{r}
+plot(ts_netp, xlim = c(start_q - 1, 2024))
+fitted2 <- ts(fitted(model2), start = c(2007, 1), freq = 4)
+prediction2 <- ts(predict(model2, newdata = predict_data)[1:4], start = c(2023, 1), freq = 4)
+lines(fitted2, col = "red")
+lines(prediction2, col = "blue")
+```
+```{r}
+# RMSE, MAPE all observation:
+rmse(ts_netp, fitted(model2))
+mape(ts_netp, fitted(model2))
+```
+```{r}
+AIC(model2)
+```
+
+```{r}
+# RMSE, MAPE last 4 observations:
+rmse(ts_netp[(length(ts_netp) - 3): length(ts_netp)], fitted(model2)[(length(ts_netp) - 3): length(ts_netp)])
+mape(ts_netp[(length(ts_netp) - 3): length(ts_netp)], fitted(model2)[(length(ts_netp) - 3): length(ts_netp)])
+```
+
+# Model 3: log-linear time trend (log(series) ~ time)
+```{r}
+# because net profit series have negative values (indicating loss), cannot take log -> rescale data
+net_p_positive <- ts_netp + abs(min(ts_netp)) + 1
+model3 <- lm(log(net_p_positive) ~ t)
+summary(model3)
+```
+
+```{r}
+plot(ts_netp, xlim = c(start_q - 1, 2024))
+fitted3 <- ts(exp(fitted(model3)) - abs(min(ts_netp)) - 1, start = c(2007, 1), freq = 4)
+prediction3 <- ts(exp(predict(model3, newdata = predict_data)[1:4]) - abs(min(ts_netp)) - 1, start = c(2023, 1), freq = 4)
+lines(fitted3, col = "red")
+lines(prediction3, col = "blue")
+```
+
+```{r}
+# RMSE, MAPE all observation:
+rmse(ts_netp, fitted(model3))
+mape(ts_netp, fitted(model3))
+```
+```{r}
+AIC(model3)
+```
+
+
+```{r}
+# RMSE, MAPE last 4 observations:
+rmse(ts_netp[(length(ts_netp) - 3): length(ts_netp)], fitted(model3)[(length(ts_netp) - 3): length(ts_netp)])
+mape(ts_netp[(length(ts_netp) - 3): length(ts_netp)], fitted(model3)[(length(ts_netp) - 3): length(ts_netp)])
+```
+
+# Model 4: seasonal (series ~ s2 + s3 +s4)
+
+```{r}
+
+model4 <- lm(ts_netp ~ seas)
+summary(model4)
+```
+
+```{r}
+plot(ts_netp, xlim = c(start_q - 1, 2024))
+fitted4 <- ts(fitted(model4), start = c(2007, 1), freq = 4)
+prediction4 <- ts(predict(model4, newdata = predict_data)[1:4], start = c(2023, 1), freq = 4)
+lines(fitted4, col = "red")
+lines(prediction4, col = "blue")
+```
+
+```{r}
+# RMSE, MAPE all observation:
+rmse(ts_netp, fitted(model4))
+mape(ts_netp, fitted(model4))
+```
+
+```{r}
+AIC(model4)
+```
+
+
+```{r}
+# RMSE, MAPE last 4 observations:
+rmse(ts_netp[(length(ts_netp) - 3): length(ts_netp)], fitted(model4)[(length(ts_netp) - 3): length(ts_netp)])
+mape(ts_netp[(length(ts_netp) - 3): length(ts_netp)], fitted(model4)[(length(ts_netp) - 3): length(ts_netp)])
+```
+
+# Model 5: linear trend + seasonal (series ~ time + seas)
+```{r}
+
+model5 <- lm(ts_netp ~ t + seas)
+summary(model5)
+```
+```{r}
+plot(ts_netp, xlim = c(start_q - 1, 2024))
+fitted5 <- ts(fitted(model5), start = c(2007, 1), freq = 4)
+prediction5 <- ts(predict(model5, newdata = predict_data)[1:4], start = c(2023, 1), freq = 4)
+lines(fitted5, col = "red")
+lines(prediction5, col = "blue")
+```
+
+```{r}
+# RMSE, MAPE all observation:
+rmse(ts_netp, fitted(model5))
+mape(ts_netp, fitted(model5))
+```
+
+```{r}
+AIC(model5)
+```
+
+```{r}
+# RMSE, MAPE last 4 observations:
+rmse(ts_netp[(length(ts_netp) - 3): length(ts_netp)], fitted(model5)[(length(ts_netp) - 3): length(ts_netp)])
+mape(ts_netp[(length(ts_netp) - 3): length(ts_netp)], fitted(model5)[(length(ts_netp) - 3): length(ts_netp)])
+```
+
+# Model 6: linear time trend * seasonal (series ~ time * seas)
+```{r}
+
+model6 <- lm(ts_netp ~ t * seas)
+summary(model6)
+```
+
+```{r}
+plot(ts_netp, xlim = c(start_q - 1, 2024))
+fitted6 <- ts(fitted(model6), start = c(2007, 1), freq = 4)
+prediction6 <- ts(predict(model6, newdata = predict_data)[1:4], start = c(2023, 1), freq = 4)
+lines(fitted6, col = "red")
+lines(prediction6, col = "blue")
+```
+
+```{r}
+# RMSE, MAPE all observation:
+rmse(ts_netp, fitted(model6))
+mape(ts_netp, fitted(model6))
+```
+```{r}
+AIC(model6)
+```
+
+```{r}
+# RMSE, MAPE last 4 observations:
+rmse(ts_netp[(length(ts_netp) - 3): length(ts_netp)], fitted(model6)[(length(ts_netp) - 3): length(ts_netp)])
+mape(ts_netp[(length(ts_netp) - 3): length(ts_netp)], fitted(model6)[(length(ts_netp) - 3): length(ts_netp)])
+```
+
+# Model 7: Holt-winters additive
+```{r}
+
+model7 <- hw(ts_netp, seasonal = "a") # package forecast
+summary(model7)
+```
+```{r}
+prediction7 <- predict(model7)$mean
+plot(ts_netp, xlim = c(start_q - 1, 2024))
+lines(fitted(model7), col = "red")
+lines(ts(prediction7[2:5], start = c(2023, 1), freq = 4), col = "blue")
+```
+
+```{r}
+# RMSE, MAPE all observation:
+rmse(ts_netp, fitted(model7))
+mape(ts_netp, fitted(model7))
+```
+
+
+```{r}
+# RMSE, MAPE last 4 observations:
+rmse(ts_netp[(length(ts_netp) - 3): length(ts_netp)], fitted(model7)[(length(ts_netp) - 3): length(ts_netp)])
+mape(ts_netp[(length(ts_netp) - 3): length(ts_netp)], fitted(model7)[(length(ts_netp) - 3): length(ts_netp)])
+```
+# Model 8: Holt-winters multiplicative
+```{r}
+
+model8 <- HoltWinters(ts_netp, seasonal = "m")
+model8
+```
+```{r}
+prediction8 <- predict(model8, 10)
+plot(ts_netp, xlim = c(start_q - 1, 2024))
+lines(fitted(model8)[, 1], col = "red")
+lines(ts(prediction8[2:10], start = c(2023, 1), freq = 4), col = "blue")
+```
+
+```{r}
+# RMSE, MAPE all observation:
+rmse(ts_netp, fitted(model8))
+mape(ts_netp, fitted(model8))
+```
+
+
+```{r}
+# RMSE, MAPE last 4 observations:
+rmse(ts_netp[(length(ts_netp) - 3): length(ts_netp)], fitted(model8)[(length(ts_netp) - 3): length(ts_netp)])
+mape(ts_netp[(length(ts_netp) - 3): length(ts_netp)], fitted(model8)[(length(ts_netp) - 3): length(ts_netp)])
+```
+# Model 9: decomposition (hard):
+# Model selection 
+-> Minimize AIC, SIC, HQ \
+-> maximize log-likelihood \
+-> compare forecast value: \texttt{$Y^F_t = \hat Y _t $} \
+-> minimize forecast error: \texttt{$Y^F_t - \hat Y _t $} (MAPE, RMSE)
