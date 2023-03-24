@@ -1,0 +1,66 @@
+---
+title: "Stock price forecast group"
+output: html_document
+date: "2023-03-24"
+---
+
+```{r setup, include=FALSE}
+library(Hmisc)
+library(tidyverse)
+library(Metrics)
+library(readr)
+library(astsa)
+library(lubridate)
+library(tseries)
+library(forecast)
+```
+# Import data
+```{r}
+
+```
+
+# Step 1: Check for stationarity
+## 1.1 Graph the series to quickly detect non-stationarity
+```{r}
+
+```
+## 1.2 Augmented Dickey-fuller test:
+
+Test with trend and constant (H1: stationary around trend) \
+if trend is insignificant: Test with constant (H1: stationary around constant)\
+if constant is insignificant: Test without constant (H1: stationary around 0)\
+
+Note: \ 
+if trend significant -> detrend series (by diff or others) \
+if constant significant -> set include.constant in Arima (package forecast) \
+```{r}
+
+```
+
+-> diff until stationary -> d is the number of times diff
+
+# Step 2: determine order for AR and MA (p, q) by checking acf and pacf
+Guide: \
+Auto regressive (AR) process (p): Order p is the lag value after which PACF plot crosses the upper confidence interval for the first time. \
+Moving average (MA) process(q): Order q of the MA process is obtained from the ACF plot, this is the lag after which ACF crosses the upper confidence interval for the first time.\
+```{r}
+
+```
+# Step 3: fit model
+```{r}
+
+```
+
+# Step 4: Evaluate model
+## Inversed roots are inside the unit circle
+## insignificant coefficient -> remove
+## Serial correlation -> add more AR (p)
+## Not white noise residuals -> add more MA (q)
+```{r}
+
+```
+
+Good model: Great R-square, log likelihood.\
+Small AIC, BIC, HQ forecast error (RMSE, MAPE)\
+# if model not good -> repeat step 2
+

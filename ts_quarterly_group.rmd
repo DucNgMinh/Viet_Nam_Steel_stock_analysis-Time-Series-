@@ -1,0 +1,71 @@
+---
+title: "Time series quarterly analysis"
+output: pdf_document
+date: "2023-03-23"
+---
+# import library
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(Hmisc)
+library(tidyverse)
+library(Metrics)
+library(astsa)
+library(tseries)
+library(readxl)
+library(tsutils)
+library(forecast)
+```
+
+# import data + plot series:
+```{r}
+# enter code here + comments about data
+```
+
+# Model 1: Linear time trend (series ~ time)
+For each model:
+1. fit + summarize model
+2. explain coefficients if possible
+3. Graph actual, fitted value, forecast value
+4. Model evaluation: F-test (overall significant), coefficients' significance, R-square
+5. Comments on RMSE, MAPE
+```{r}
+# fit model here
+```
+# Model 2: Log time trend (series ~ log(time))
+```{r}
+
+```
+# Model 3: log-linear time trend (log(series) ~ time)
+```{r}
+
+```
+
+# Model 4: seasonal (series ~ s2 + s3 +s4)
+```{r}
+# enter code here
+```
+# Model 5: linear trend + seasonal (series ~ time + seas)
+```{r}
+# enter code here
+```
+
+# Model 6: linear time trend * seasonal (series ~ time * seas)
+```{r}
+# enter code here
+```
+
+# Model 7: Holt-winters additive
+```{r}
+
+```
+# Model 8: Holt-winters multiplicative
+```{r}
+
+```
+# Model 9: decomposition (hard):
+# Model selection 
+
+-> Minimize AIC, SIC, HQ \
+-> maximize log-likelihood \
+-> compare forecast value: \texttt{$Y^F_t = \hat Y_t $} \
+-> minimize forecast error: \texttt{$Y^F_t - \hat Y_t $} (MAPE, RMSE)
