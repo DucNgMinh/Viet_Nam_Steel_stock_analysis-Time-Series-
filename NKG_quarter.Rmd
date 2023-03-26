@@ -8,27 +8,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 # import library
 ```{r setup, include=FALSE}
-# truoc khi thay data + run all can sua data dung format, sua start_q la thoi gian bat dau, sua model 3, model 8 neu data khong am
+
 knitr::opts_chunk$set(echo = TRUE)
 library(Hmisc)
 library(tidyverse)
@@ -48,7 +30,7 @@ ts_netp <- ts(clean_nkg$`Data`, start = c(start_q, 1), freq = 4)
 t <- seq_along(ts_netp)
 # prediction data for 2023
 t_pred <- seq(length(t) + 2, length(t) * 2 + 1)
-seas <- seasdummy(51, 4) # 63 = length(ts)
+seas <- seasdummy(51, 4) # 51 = length(ts)
 predict_data <- data.frame(t = t_pred, seas1 = seas[, 1], seas2 = seas[, 2], seas3 = seas[, 3])
 head(clean_nkg)
 ```
