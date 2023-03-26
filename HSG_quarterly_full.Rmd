@@ -1,0 +1,305 @@
+---
+title: "Time series quarterly analysis"
+output: pdf_document
+date: "2023-03-23"
+---
+# import library
+```{r setup, include=FALSE}
+# truoc khi thay data + run all can sua data dung format, sua start_q la thoi gian bat dau, sua model 3, model 8 neu data khong am
+knitr::opts_chunk$set(echo = TRUE)
+library(Hmisc)
+library(tidyverse)
+library(Metrics)
+library(astsa)
+library(tseries)
+library(readxl)
+library(tsutils)
+library(forecast)
+```
+# import data + plot series:
+```{r}
+# Load Data
+df <- read_excel("C:\\Users\\ADMIN\\RProjects\\Viet_Nam_Steel_stock_analysis-Time-Series-\\Gross Sale Revenues - HSG.xlsx")
+df
+```
+```{r}
+graph_predict <- function( model, df,start_year, df_predict, start_index, end_index, predict_year){
+    plot(df, xlim = c(start_year - 1, 2024))
+    fitted <- ts(model$fitted, start = c(start_year, 1), freq = 4)
+    prediction <- ts(predict(model, newdata = df_predict)[start_index : end_index], start = c(predict_year, 1), freq = 4)
+    lines(fitted, col = "red")
+    lines(prediction, col = "blue")
+}
+
+rmse_mape <- function( model, df){
+    rmse <- rmse(df, model$fitted)
+    mape <- mape(df, model$fitted) * 100
+    result <- data.frame(rmse, mape)
+    return(result)
+}
+
+rmse_mape_4_last <- function( model, df){
+    rmse <- rmse(df[(length(df) - 3): length(df)], model$fitted[(length(df) - 3): length(df)])
+    mape <- mape(df[(length(df) - 3): length(df)], model$fitted[(length(df) - 3): length(df)]) * 100
+    result <- data.frame(rmse, mape)
+    return(result)
+}
+```
+```{r}
+gross_sale_revenue <- ts(df, start = c(2008,1), frequency = 4)
+time <- seq(gross_sale_revenue)
+summary(time)
+```
+```{r}
+# create dummy season
+s1 <- rep(c(1,0,0,0), 14)
+s1 <- c(s1, c(1,0,0))
+
+s2 <- rep(c(0,1,0,0), 14)
+s2 <- c(s2, c(0,1,0))
+
+s3 <- rep(c(0,0,1,0), 14)
+s3 <- c(s3, c(0,0,1))
+
+s4 <- rep(c(0,0,0,1), 14)
+s4 <- c(s4, c(0,0,0))
+```
+```{r}
+time_predict <- seq(60, 118)
+data_predict <- data.frame(time = time_predict, seas2 = s3 , seas3= s4, seas4= s1)
+data_predict
+```
+
+```{r}
+plot.ts(gross_sale_revenue)
+```
+
+# Model 1: Linear time trend (series ~ time)
+For each model:
+1. fit + summarize model \
+2. explain coefficients if possible \
+3. Graph actual, fitted value, forecast value \
+4. Model evaluation: F-test (overall significant), coefficients' significance, R-square \
+5. Comments on RMSE, MAPE \
+```{r}
+model1 <- lm(gross_sale_revenue ~ time)
+summary(model1)
+```
+```{r}
+graph_predict( model1, gross_sale_revenue, 2008, data_predict, 2, 5, 2023)
+```
+
+```{r}
+rmse_mape(model1, gross_sale_revenue)
+```
+```{r}
+AIC(model1)
+```
+```{r}
+rmse_mape_4_last(model1, gross_sale_revenue)
+```
+# Model 2: Log time trend (series ~ log(time))
+```{r}
+model2 <- lm(gross_sale_revenue ~ log(time))
+summary(model2)
+```
+```{r}
+graph_predict( model2, gross_sale_revenue, 2008, data_predict, 2, 5, 2023)
+```
+```{r}
+# RMSE, MAPE all observation:
+rmse_mape(model2, gross_sale_revenue)
+```
+```{r}
+AIC(model2)
+```
+
+```{r}
+# RMSE, MAPE last 4 observations:
+rmse_mape_4_last(model2, gross_sale_revenue)
+```
+
+# Model 3: log-linear time trend (log(series) ~ time)
+```{r}
+model3 <- lm(log(gross_sale_revenue) ~ time)
+summary(model3)
+```
+
+```{r}
+plot(gross_sale_revenue, xlim = c(2008 - 1, 2024))
+fitted <- ts(exp(model3$fitted), start = c(2008, 1), freq = 4)
+prediction <- ts(exp(predict(model3, newdata = data_predict)[2:5]), start = c(2023, 1), freq = 4)
+lines(fitted, col = "red")
+lines(prediction, col = "blue")
+```
+
+```{r}
+# RMSE, MAPE all observation:
+rmse_mape(model3, gross_sale_revenue)
+```
+```{r}
+AIC(model3)
+```
+```{r}
+# RMSE, MAPE last 4 observations:
+rmse_mape_4_last(model3, gross_sale_revenue)
+```
+
+# Model 4: seasonal (series ~ s2 + s3 +s4)
+
+```{r}
+
+model4 <- lm(gross_sale_revenue ~ s2 +s3 + s4)
+summary(model4)
+```
+
+```{r}
+graph_predict(model4, gross_sale_revenue, 2008, data_predict, 2, 5, 2023)
+```
+
+```{r}
+# RMSE, MAPE all observation:
+rmse_mape(model4, gross_sale_revenue)
+```
+```{r}
+AIC(model4)
+```
+```{r}
+# RMSE, MAPE last 4 observations:
+rmse_mape_4_last(model4, gross_sale_revenue)
+```
+
+# Model 5: linear trend + seasonal (series ~ time + seas)
+```{r}
+
+model5 <- lm(gross_sale_revenue ~ time + s2 +s3 + s4)
+summary(model5)
+```
+```{r}
+graph_predict(model5, gross_sale_revenue, 2008, data_predict, 2, 5, 2023)
+```
+```{r}
+# RMSE, MAPE all observation:
+rmse_mape(model5, gross_sale_revenue)
+```
+```{r}
+AIC(model5)
+```
+```{r}
+# RMSE, MAPE last 4 observations:
+rmse_mape_4_last(model5, gross_sale_revenue)
+```
+
+# Model 6: linear time trend * seasonal (series ~ time * seas)
+```{r}
+
+model6 <- lm(gross_sale_revenue ~ time + time * s2 + time * s3 + time * s4)
+summary(model6)
+```
+
+```{r}
+graph_predict(model6, gross_sale_revenue, 2008, data_predict, 2, 5, 2023)
+```
+```{r}
+# RMSE, MAPE all observation:
+rmse_mape(model6, gross_sale_revenue)
+```
+```{r}
+AIC(model6)
+```
+```{r}
+# RMSE, MAPE last 4 observations:
+rmse_mape_4_last(model6, gross_sale_revenue)
+```
+
+# Model 7: Holt-winters additive
+```{r}
+
+model7 <- hw(gross_sale_revenue, seasonal = "a") # package forecast
+summary(model7)
+```
+```{r}
+prediction7 <- predict(model7)$mean
+plot(gross_sale_revenue, xlim = c(2008 - 1, 2024))
+lines(fitted(model7), col = "red")
+lines(ts(prediction7[2:5], start = c(2023, 1), freq = 4), col = "blue")
+```
+
+```{r}
+# RMSE, MAPE all observation:
+rmse_mape(model7, gross_sale_revenue)
+```
+```{r}
+# RMSE, MAPE last 4 observations:
+rmse_mape_4_last(model7, gross_sale_revenue)
+```
+# Model 8: Holt-winters multiplicative
+```{r}
+
+model8 <- hw(gross_sale_revenue, seasonal = "m")
+model8
+```
+```{r}
+prediction8 <- predict(model8)$mean
+plot(gross_sale_revenue, xlim = c(2008 - 1, 2024))
+lines(fitted(model7), col = "red")
+lines(ts(prediction7[2:5], start = c(2023, 1), freq = 4), col = "blue")
+```
+
+```{r}
+# RMSE, MAPE all observation:
+rmse_mape(model8, gross_sale_revenue)
+```
+```{r}
+# RMSE, MAPE last 4 observations:
+rmse_mape_4_last(model8, gross_sale_revenue)
+```
+# Model 9: decomposition (hard):
+# Model selection
+# try to decompose trend, seasonality, and random then do regression with trend or seasonality or trend + seasonality
+```{r}
+decom.gross_sale_revenue.a <- decompose(gross_sale_revenue, type = 'additive')
+decom.gross_sale_revenue.a.trend <- decom.gross_sale_revenue.a$trend
+decom.gross_sale_revenue.a.seas <- decom.gross_sale_revenue.a$seasonal
+decom.gross_sale_revenue.a.rand <- decom.gross_sale_revenue.a$rand
+decom.gross_sale_revenue.a.seasadj <- gross_sale_revenue - decom.gross_sale_revenue.a$seasonal
+plot(decom.gross_sale_revenue.a)
+```
+```{r}
+plot(gross_sale_revenue, col = 'blue')
+lines(decom.gross_sale_revenue.a.trend)
+lines(decom.gross_sale_revenue.a.trendseas, col = 'red')
+```
+```{r}
+model9.seasadj = lm(decom.gross_sale_revenue.a.seasadj ~ time )
+```
+```{r}
+graph_predict(model9.seasadj, gross_sale_revenue, 2008, data_predict, 2, 5, 2023)
+```
+```{r}
+rmse_mape(model9.seasadj, gross_sale_revenue)
+rmse_mape_4_last(model9.seasadj, gross_sale_revenue)
+```
+```{r}
+decom.gross_sale_revenue.m <- decompose(gross_sale_revenue, type = 'multiplicative')
+decom.gross_sale_revenue.m.trend <- decom.gross_sale_revenue.m$trend
+decom.gross_sale_revenue.m.seas <- decom.gross_sale_revenue.m$seasonal
+decom.gross_sale_revenue.m.rand <- decom.gross_sale_revenue.m$rand
+decom.gross_sale_revenue.m.seasadj <- gross_sale_revenue - decom.gross_sale_revenue.m$seasonal
+plot(decom.gross_sale_revenue.m)
+```
+```{r}
+plot(gross_sale_revenue, col = 'blue')
+lines(decom.gross_sale_revenue.m.trend)
+lines(decom.gross_sale_revenue.m.trendseas, col = 'red')
+```
+```{r}
+model10.seasadj = lm(decom.gross_sale_revenue.m.seasadj ~ time )
+```
+```{r}
+graph_predict(model10.seasadj, gross_sale_revenue, 2008, data_predict, 2, 5, 2023)
+```
+```{r}
+rmse_mape(model10.seasadj, gross_sale_revenue)
+rmse_mape_4_last(model10.seasadj, gross_sale_revenue)
+```
