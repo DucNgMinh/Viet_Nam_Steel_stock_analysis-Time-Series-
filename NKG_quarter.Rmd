@@ -24,7 +24,7 @@ library(forecast)
 
 # import data + plot series:
 ```{r}
-clean_nkg <- read_excel("C:/Users/LeHuyPhong/Downloads/Book2.xlsx")
+clean_nkg <- read_excel("C:/Users/LeHuyPhong/Downloads/GSR_NKG.xlsx")
 start_q <- 2010 #2007Q1
 ts_netp <- ts(clean_nkg$`Data`, start = c(start_q, 1), freq = 4)
 t <- seq_along(ts_netp)
