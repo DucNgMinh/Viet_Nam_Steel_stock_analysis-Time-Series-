@@ -1,0 +1,148 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+The [R plugin](https://www.jetbrains.com/help/pycharm/r-plugin-support.html) for IntelliJ-based IDEs provides
+handy capabilities to work with the [R Markdown](https://www.jetbrains.com/help/pycharm/r-markdown.html) files.
+To [add](https://www.jetbrains.com/help/pycharm/r-markdown.html#add-code-chunk) a new R chunk,
+position the caret at any line or the code chunk, then click "+".
+
+The code chunk appears:
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+library(Hmisc)
+library(tidyverse)
+library(Metrics)
+library(astsa)
+library(tseries)
+library(readxl)
+library(tsutils)
+library(forecast)
+library(urca)
+library(lmtest)
+library(vars)
+library(tsDyn)
+```
+
+Type any R code in the chunk, for example:
+```{r}
+# import data + plot series:
+HSG_train <- read_excel("C:\\Users\\ADMIN\\RProjects\\Viet_Nam_Steel_stock_analysis-Time-Series-\\Stock Price - HSG - train.xlsx")
+HPG_train <- read_excel("C:\\Users\\ADMIN\\RProjects\\Viet_Nam_Steel_stock_analysis-Time-Series-\\Stock Price - HPG - train.xlsx")
+NKG_train <- read_excel("C:\\Users\\ADMIN\\RProjects\\Viet_Nam_Steel_stock_analysis-Time-Series-\\Stock Price - NKG - train.xlsx")
+```
+```{r}
+length(HSG_train$`<Close>`)
+length(HPG_train$`<Close>`)
+length(NKG_train$`<Close>`)
+```
+```{r}
+HSG <- HSG_train$`<Close>`
+HPG <- HPG_train$`<Close>`
+NKG <- NKG_train$`<Close>`
+```
+```{r}
+summary(ca.jo(data.frame(HSG, HPG, NKG), type = 'trace'))
+```
+```{r}
+summary(ca.jo(data.frame(HSG, HPG, NKG), type = 'eigen'))
+```
+# lambda_trace
+          test 10pct  5pct  1pct
+r <= 1 | 15.83 15.66 17.95 23.52
+r = 0  | 36.18 28.71 31.52 37.22
+
+r = 0:  test = 36.18 > 31.52  -> reject H0: Number of cointegrate > 0
+r <= 1: test = 15.83 < 17.95  -> Not reject H0: Number of cointegrate =< 1 (VECM ở dưới)
+
+# lambda_max_eigen
+          test 10pct  5pct  1pct
+r = 0  | 20.35 18.90 21.07 25.75
+
+r = 0:  test = 20.35 > 21.07  -> Not reject H0: Number of cointegrate = 0
+
+
+```{r}
+summary(lm(HPG ~ HSG + NKG))
+```
+```{r}
+resid.HPG <- resid(summary(lm(HPG ~ HSG + NKG)))
+summary(ur.df(resid.HPG, type = 'none'))
+```
+```{r}
+summary(lm(diff(HPG) ~ diff(HSG) + diff(NKG) + resid.HPG[1:(length(resid.HPG) - 1)]))
+```
+# VAR
+```{r}
+HPG.d <- diff(HPG)
+HSG.d <- diff(HSG)
+NKG.d <- diff(NKG)
+data_var <- data.frame(HPG.d, HSG.d, NKG.d)
+```
+
+```{r}
+grangertest(HPG.d ~ HSG.d, order = 1 )
+```
+```{r}
+grangertest(HSG.d ~ HPG.d, order = 1 )
+```
+```{r}
+grangertest(HPG.d ~ NKG.d, order = 1 )
+```
+```{r}
+grangertest(NKG.d ~ HPG.d, order = 1 )
+```
+```{r}
+grangertest(HSG.d ~ NKG.d, order = 1 )
+```
+```{r}
+grangertest(NKG.d ~ HSG.d, order = 1 )
+```
+```{r}
+var1 <- VAR(data_var, p= 1, type = 'const')
+summary(var1)
+```
+# Model
+\delta HPG_t = -0.009245 + 0.0495 * \delta HPG_t-1 + 0.0683 * \delta HSG_t-1 - 0.0548 * \delta NKG_t-1
+\delta HSG_t = -0.018245 - 0.0695 * \delta HPG_t-1 + 0.1051 * \delta HSG_t-1 - 0.0256 * \delta NKG_t-1
+\delta NKG_t =  0.002812 + 0.0191 * \delta HPG_t-1 + 0.1079 * \delta HSG_t-1 + 0.0410 * \delta NKG_t-1
+
+# Test for model
+Significant coefficients
+
+No serrial correlation:         H0 :No serrial correlation
+                                H1 :Serrial correlation
+```{r}
+serial.test(var1)
+```
+# p - value = 0.009 -> Reject H0 -> Serial Correlation
+```{r}
+forecast_var1 <- predict(var1)
+plot(forecast_var1)
+```
+# IRF
+```{r}
+irf(var1)
+```
+```{r}
+plot(irf(var1))
+```
+# FEDV
+```{r}
+fevd(var1)
+```
+```{r}
+plot(fevd(var1))
+```
+```{r}
+VARselect(data_var)
+```
+```{r}
+VECM(data.frame(HSG, HPG, NKG), lag= 1, include = 'none')
+```
+```{r}
+VECM(data.frame(HSG, HPG, NKG), lag= 1, include = 'const')
+```
+Now, click the **Run** button on the chunk toolbar to [execute](https://www.jetbrains.com/help/pycharm/r-markdown.html#run-r-code) the chunk code. The result should be placed under the chunk.
+Click the **Knit and Open Document** to build and preview an output.

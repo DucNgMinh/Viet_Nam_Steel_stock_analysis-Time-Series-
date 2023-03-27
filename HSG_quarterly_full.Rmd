@@ -5,7 +5,6 @@ date: "2023-03-23"
 ---
 # import library
 ```{r setup, include=FALSE}
-# truoc khi thay data + run all can sua data dung format, sua start_q la thoi gian bat dau, sua model 3, model 8 neu data khong am
 knitr::opts_chunk$set(echo = TRUE)
 library(Hmisc)
 library(tidyverse)
