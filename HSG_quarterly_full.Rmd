@@ -45,7 +45,7 @@ rmse_mape_4_last <- function( model, df){
 }
 ```
 ```{r}
-gross_sale_revenue <- ts(df, start = c(2008,1), frequency = 4)
+gross_sale_revenue <- ts(df$Gross_Sale_Revenues, start = c(2008,1), frequency = 4)
 time <- seq(gross_sale_revenue)
 summary(time)
 ```
@@ -97,27 +97,6 @@ AIC(model1)
 ```{r}
 rmse_mape_4_last(model1, gross_sale_revenue)
 ```
-# Model 2: Log time trend (series ~ log(time))
-```{r}
-model2 <- lm(gross_sale_revenue ~ log(time))
-summary(model2)
-```
-```{r}
-graph_predict( model2, gross_sale_revenue, 2008, data_predict, 2, 5, 2023)
-```
-```{r}
-# RMSE, MAPE all observation:
-rmse_mape(model2, gross_sale_revenue)
-```
-```{r}
-AIC(model2)
-```
-
-```{r}
-# RMSE, MAPE last 4 observations:
-rmse_mape_4_last(model2, gross_sale_revenue)
-```
-
 # Model 3: log-linear time trend (log(series) ~ time)
 ```{r}
 model3 <- lm(log(gross_sale_revenue) ~ time)
@@ -135,9 +114,6 @@ lines(prediction, col = "blue")
 ```{r}
 # RMSE, MAPE all observation:
 rmse_mape(model3, gross_sale_revenue)
-```
-```{r}
-AIC(model3)
 ```
 ```{r}
 # RMSE, MAPE last 4 observations:
@@ -161,16 +137,11 @@ graph_predict(model4, gross_sale_revenue, 2008, data_predict, 2, 5, 2023)
 rmse_mape(model4, gross_sale_revenue)
 ```
 ```{r}
-AIC(model4)
-```
-```{r}
 # RMSE, MAPE last 4 observations:
 rmse_mape_4_last(model4, gross_sale_revenue)
 ```
-
 # Model 5: linear trend + seasonal (series ~ time + seas)
 ```{r}
-
 model5 <- lm(gross_sale_revenue ~ time + s2 +s3 + s4)
 summary(model5)
 ```
@@ -182,16 +153,12 @@ graph_predict(model5, gross_sale_revenue, 2008, data_predict, 2, 5, 2023)
 rmse_mape(model5, gross_sale_revenue)
 ```
 ```{r}
-AIC(model5)
-```
-```{r}
 # RMSE, MAPE last 4 observations:
 rmse_mape_4_last(model5, gross_sale_revenue)
 ```
 
 # Model 6: linear time trend * seasonal (series ~ time * seas)
 ```{r}
-
 model6 <- lm(gross_sale_revenue ~ time + time * s2 + time * s3 + time * s4)
 summary(model6)
 ```
@@ -204,16 +171,11 @@ graph_predict(model6, gross_sale_revenue, 2008, data_predict, 2, 5, 2023)
 rmse_mape(model6, gross_sale_revenue)
 ```
 ```{r}
-AIC(model6)
-```
-```{r}
 # RMSE, MAPE last 4 observations:
 rmse_mape_4_last(model6, gross_sale_revenue)
 ```
-
 # Model 7: Holt-winters additive
 ```{r}
-
 model7 <- hw(gross_sale_revenue, seasonal = "a") # package forecast
 summary(model7)
 ```
@@ -234,7 +196,6 @@ rmse_mape_4_last(model7, gross_sale_revenue)
 ```
 # Model 8: Holt-winters multiplicative
 ```{r}
-
 model8 <- hw(gross_sale_revenue, seasonal = "m")
 model8
 ```
@@ -261,6 +222,7 @@ decom.gross_sale_revenue.a <- decompose(gross_sale_revenue, type = 'additive')
 decom.gross_sale_revenue.a.trend <- decom.gross_sale_revenue.a$trend
 decom.gross_sale_revenue.a.seas <- decom.gross_sale_revenue.a$seasonal
 decom.gross_sale_revenue.a.rand <- decom.gross_sale_revenue.a$rand
+decom.gross_sale_revenue.a.trendseas <- gross_sale_revenue - decom.gross_sale_revenue.a$rand
 decom.gross_sale_revenue.a.seasadj <- gross_sale_revenue - decom.gross_sale_revenue.a$seasonal
 plot(decom.gross_sale_revenue.a)
 ```
@@ -269,11 +231,23 @@ plot(gross_sale_revenue, col = 'blue')
 lines(decom.gross_sale_revenue.a.trend)
 lines(decom.gross_sale_revenue.a.trendseas, col = 'red')
 ```
+
 ```{r}
+decom.gross_sale_revenue.a.seasadj <- gross_sale_revenue - decom.gross_sale_revenue.a$seasonal
 model9.seasadj = lm(decom.gross_sale_revenue.a.seasadj ~ time )
+summary(model9.seasadj)
 ```
 ```{r}
-graph_predict(model9.seasadj, gross_sale_revenue, 2008, data_predict, 2, 5, 2023)
+predict(model9.seasadj, newdata = data_predict)[2 : 5] + decom.gross_sale_revenue.a.seas[1:4]
+pred <- predict(model9.seasadj, newdata = data_predict)[2 : 5] + decom.gross_sale_revenue.a.seas[1:4]
+prediction <- ts(pred, start = c(2023, 1), freq = 4)
+prediction
+```
+```{r}
+plot(gross_sale_revenue, xlim = c(2008 - 1, 2024))
+fitted <- ts(model9.seasadj$fitted + decom.gross_sale_revenue.a.seas, start = c(2008, 1), freq = 4)
+lines(fitted, col = "red")
+lines(prediction, col = "blue")
 ```
 ```{r}
 rmse_mape(model9.seasadj, gross_sale_revenue)
@@ -284,7 +258,7 @@ decom.gross_sale_revenue.m <- decompose(gross_sale_revenue, type = 'multiplicati
 decom.gross_sale_revenue.m.trend <- decom.gross_sale_revenue.m$trend
 decom.gross_sale_revenue.m.seas <- decom.gross_sale_revenue.m$seasonal
 decom.gross_sale_revenue.m.rand <- decom.gross_sale_revenue.m$rand
-decom.gross_sale_revenue.m.seasadj <- gross_sale_revenue - decom.gross_sale_revenue.m$seasonal
+decom.gross_sale_revenue.m.seasadj <- gross_sale_revenue / decom.gross_sale_revenue.m$seasonal
 plot(decom.gross_sale_revenue.m)
 ```
 ```{r}
