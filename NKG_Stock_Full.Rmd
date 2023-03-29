@@ -109,7 +109,7 @@ auto arima to search for optimize number for p d q
 fit <- auto.arima(ts_closing,max.p = 5,max.q = 5,max.P = 5,max.Q = 5,max.d = 5,seasonal = TRUE,ic = 'aic')
 fit
 ```
-First guess ARIMA(5, 2, 3)
+First guess ARIMA(0, 1, 1)
 ```{r}
 test_2_diff <- ur.df(diff(diff(ts_closing)), type = "drift", lag = 0)
 summary(test_2_diff)
@@ -127,8 +127,8 @@ pacf(diff(diff(ts_closing)))
 ```
 # Step 3: fit model
 ```{r}
-arima523 <- Arima(ts_closing, order = c(5, 2, 3), include.constant = TRUE)
-summary(arima523 )
+arima011 <- Arima(ts_closing, order = c(0, 1, 1), include.constant = TRUE)
+summary(arima011 )
 ```
 
 # Step 4: Evaluate model
@@ -137,15 +137,15 @@ summary(arima523 )
 ## Serial correlation -> add more AR (p)
 ## Not white noise residuals -> add more MA (q)
 ```{r}
-evaluate_arima(arima523 )
+evaluate_arima(arima011 )
 ```
 ```{r}
-plot_arima(arima523)
+plot_arima(arima011)
 ```
 ```{r}
-rmse_mape_all(arima523)
-rmse_mape_last_10(arima523)
-rmse_mape_test_10(arima523)
+rmse_mape_all(arima011)
+rmse_mape_last_10(arima011)
+rmse_mape_test_10(arima011)
 ```
 
 Good model: Great R-square, log likelihood.\
@@ -153,6 +153,6 @@ Small AIC, BIC, HQ forecast error (RMSE, MAPE)\
 
 
 ```{r}
-autoplot(arima523)
-checkresiduals(arima523)
+autoplot(arima011)
+checkresiduals(arima011)
 ```
