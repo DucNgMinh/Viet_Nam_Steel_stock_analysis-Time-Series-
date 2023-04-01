@@ -56,9 +56,9 @@ rmse_mape_test_10 <-function(model) {
 # Import data
 ```{r}
 train <- read_excel("C:/Users/LeHuyPhong/Downloads/Train_NKG.xlsx", col_names = FALSE) #use 2 years 2021 and 2022 to train model
-hpg_2023 <- read_excel("C:/Users/LeHuyPhong/Downloads/Test_NKG.xlsx", col_names = FALSE)
+nkg_2023 <- read_excel("C:/Users/LeHuyPhong/Downloads/Test_NKG.xlsx", col_names = FALSE)
 ts_closing <- ts(train, start = 2021, frequency = 250)
-ts_test <- ts(hpg_2023, start = 2023, frequency = 250)
+ts_test <- ts(nkg_2023, start = 2023, frequency = 250)
 ```
 
 # Step 1: Check for stationarity
