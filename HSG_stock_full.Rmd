@@ -61,24 +61,23 @@ rmse_mape_test_10 <-function(model) {
   print(rmse(ts_test[1:10], prediction))
   print(mape(ts_test[1:10], prediction))
 }
-
-
-
 ```
 # Import data
 ```{r}
-train <- read_excel("C:\\Users\\ADMIN\\RProjects\\Viet_Nam_Steel_stock_analysis-Time-Series-\\Stock Price - HSG - train.xlsx", col_names = FALSE) #use 2 years 2021 and 2022 to train model
-hpg_2023 <- read_excel("C:\\Users\\ADMIN\\RProjects\\Viet_Nam_Steel_stock_analysis-Time-Series-\\Stock Price - HSG - test.xlsx", col_names = FALSE)
+train <- read_excel("C:\\Users\\ADMIN\\RProjects\\Viet_Nam_Steel_stock_analysis-Time-Series-\\Stock Price - HSG - train.xlsx", col_names= TRUE) #use 2 years 2021 and 2022 to train model
+hpg_2023 <- read_excel("C:\\Users\\ADMIN\\RProjects\\Viet_Nam_Steel_stock_analysis-Time-Series-\\Stock Price - HSG - test.xlsx", col_names= FALSE)
 
-ts_closing <- ts(train, start = 2021, frequency = 250)
+ts_closing <- ts(train$`<Close>`, start = 2021, frequency = 250)
 ts_test <- ts(hpg_2023, start = 2023, frequency = 250)
 ```
-
+```{r}
+ts_test
+```
 # Step 1: Check for stationarity
 ## 1.1 Graph the series to quickly detect non-stationarity
 ```{r}
 plot(ts_closing)
-lines(ts_test, col = "green")
+#lines(ts_test, col = "green")
 ```
 
 ## 1.2 Augmented Dickey-fuller test:
@@ -119,8 +118,14 @@ pacf(diff(ts_closing))
 ```
 auto arima to search for optimize number for p d q
 ```{r}
-fit <- auto.arima(ts_closing,max.p = 5,max.q = 5,max.P = 5,max.Q = 5,max.d = 5,seasonal = TRUE,ic = 'aic')
+fit <- auto.arima(ts_closing,max.p = 0,max.q = 0,max.d = 1,seasonal = TRUE,ic = 'aic')
 fit
+```
+```{r}
+auto.arima(ts_closing,max.p = 5,max.q = 5,max.d = 5,seasonal = TRUE,ic = 'aic',stepwise=FALSE)
+```
+```{r}
+auto.arima(ts_closing,max.p = 10,max.q = 10,max.d = 2,seasonal = TRUE,ic = 'aic',stepwise=FALSE)
 ```
 First guess ARIMA(5, 2, 3)
 ```{r}
@@ -140,8 +145,8 @@ pacf(diff(diff(ts_closing)))
 ```
 # Step 3: fit model
 ```{r}
-arima523 <- Arima(ts_closing, order = c(5, 2, 3), include.constant = TRUE)
-summary(arima523 )
+arima221 <- Arima(ts_closing, order = c(2, 2, 1), include.constant = TRUE)
+summary(arima221)
 ```
 
 # Step 4: Evaluate model
@@ -149,27 +154,73 @@ summary(arima523 )
 ## insignificant coefficient -> remove
 ## Serial correlation -> add more AR (p)
 ## Not white noise residuals -> add more MA (q)
+
 ```{r}
-evaluate_arima(arima523 )
+evaluate_arima(arima221)
 ```
 ```{r}
-plot_arima(arima523)
-```
-```{r}
-rmse_mape_all(arima523)
-rmse_mape_last_10(arima523)
-rmse_mape_test_10(arima523)
+rmse_mape_all(arima221)
+rmse_mape_last_10(arima221)
+rmse_mape_test_10(arima221)
 ```
 
 Good model: Great R-square, log likelihood.\
 Small AIC, BIC, HQ forecast error (RMSE, MAPE)\
 
 
-```{r}
-autoplot(arima523)
-checkresiduals(arima523)
 
+```{r}
+arima011 <- Arima(ts_closing, order = c(0, 1, 1), include.constant = TRUE)
+summary(arima011)
+rmse_mape_all(arima011)
+rmse_mape_last_10(arima011)
+rmse_mape_test_10(arima011)
 ```
+```{r}
+evaluate_arima(arima011)
+```
+```{r}
+arima211 <- Arima(ts_closing, order = c(2, 1, 1), include.constant = TRUE)
+summary(arima211)
+rmse_mape_all(arima211)
+rmse_mape_last_10(arima211)
+rmse_mape_test_10(arima211)
+```
+```{r}
+evaluate_arima(arima211)
+```
+```{r}
+arima111 <- Arima(ts_closing, order = c(1, 1, 1), include.constant = TRUE)
+summary(arima111)
+rmse_mape_all(arima111)
+rmse_mape_last_10(arima111)
+rmse_mape_test_10(arima111)
+```
+```{r}
+evaluate_arima(arima111)
+```
+```{r}
+autoplot(arima111)
+```
+```{r}
+plot_arima(arima111)
+legend("topleft", legend=c("Actual", "Fitted", "Forecast 2023", "Actual 2023"),
+       fill =c("black", "red", "blue", "green"), cex=0.8)
+```
+```{r}
+checkresiduals(arima111)
+```
+```{r}
+checkresiduals(Arima(ts_closing, order = c(2,2,1), include.constant = TRUE))
+```
+```{r}
+checkresiduals(Arima(ts_closing, order = c(0,1,0), include.constant = TRUE))
+```
+```{r}
+auto.arima(ts_closing,max.p = 10,max.q = 10,max.d = 5,seasonal = TRUE, ic = 'aic', stepwise= FALSE)
+```
+
+
 
 
 
