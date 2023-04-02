@@ -33,11 +33,6 @@ HPG_train <- read_excel("C:\\Users\\ADMIN\\RProjects\\Viet_Nam_Steel_stock_analy
 NKG_train <- read_excel("C:\\Users\\ADMIN\\RProjects\\Viet_Nam_Steel_stock_analysis-Time-Series-\\Stock Price - NKG - train.xlsx")
 ```
 ```{r}
-length(HSG_train$`<Close>`)
-length(HPG_train$`<Close>`)
-length(NKG_train$`<Close>`)
-```
-```{r}
 HSG <- HSG_train$`<Close>`
 HPG <- HPG_train$`<Close>`
 NKG <- NKG_train$`<Close>`
@@ -78,71 +73,122 @@ summary(lm(diff(HPG) ~ diff(HSG) + diff(NKG) + resid.HPG[1:(length(resid.HPG) - 
 HPG.d <- diff(HPG)
 HSG.d <- diff(HSG)
 NKG.d <- diff(NKG)
-data_var <- data.frame(HPG.d, HSG.d, NKG.d)
+data_diff <- data.frame(HPG.d, HSG.d, NKG.d)
+data_non_diff <- data.frame(HPG, HSG, NKG)
 ```
 
 ```{r}
-grangertest(HPG.d ~ HSG.d, order = 1 )
+# grangertest(HPG.d ~ HSG.d, order = 1 )
+# grangertest(HSG.d ~ HPG.d, order = 1 )
+# grangertest(HPG.d ~ NKG.d, order = 1 )
+# grangertest(NKG.d ~ HPG.d, order = 1 )
+# grangertest(HSG.d ~ NKG.d, order = 1 )
+# grangertest(NKG.d ~ HSG.d, order = 1 )
 ```
 ```{r}
-grangertest(HSG.d ~ HPG.d, order = 1 )
+var_diff_lag1 <- VAR(data_diff, p= 1, type = 'const')
+summary(var_diff_lag1)
 ```
-```{r}
-grangertest(HPG.d ~ NKG.d, order = 1 )
-```
-```{r}
-grangertest(NKG.d ~ HPG.d, order = 1 )
-```
-```{r}
-grangertest(HSG.d ~ NKG.d, order = 1 )
-```
-```{r}
-grangertest(NKG.d ~ HSG.d, order = 1 )
-```
-```{r}
-var1 <- VAR(data_var, p= 1, type = 'const')
-summary(var1)
-```
-# Model
-\delta HPG_t = -0.009245 + 0.0495 * \delta HPG_t-1 + 0.0683 * \delta HSG_t-1 - 0.0548 * \delta NKG_t-1
-\delta HSG_t = -0.018245 - 0.0695 * \delta HPG_t-1 + 0.1051 * \delta HSG_t-1 - 0.0256 * \delta NKG_t-1
-\delta NKG_t =  0.002812 + 0.0191 * \delta HPG_t-1 + 0.1079 * \delta HSG_t-1 + 0.0410 * \delta NKG_t-1
-
 # Test for model
 Significant coefficients
 
 No serrial correlation:         H0 :No serrial correlation
                                 H1 :Serrial correlation
 ```{r}
-serial.test(var1)
+serial.test(var_diff_lag1)
 ```
 # p - value = 0.009 -> Reject H0 -> Serial Correlation
 ```{r}
-forecast_var1 <- predict(var1)
-plot(forecast_var1)
+plot(predict(var_diff_lag1))
 ```
 # IRF
 ```{r}
-irf(var1)
+irf(var_diff_lag1)
 ```
 ```{r}
-plot(irf(var1))
+plot(irf(var_diff_lag1))
 ```
 # FEDV
 ```{r}
-fevd(var1)
+plot(fevd(var_diff_lag1))
 ```
 ```{r}
-plot(fevd(var1))
+VARselect(data_diff, lag.max = 4, type = 'const')
 ```
 ```{r}
-VARselect(data_var)
+VARselect(data_diff, lag.max = 4, type = 'none')
 ```
 ```{r}
 VECM(data.frame(HSG, HPG, NKG), lag= 1, include = 'none')
 ```
 ```{r}
-VECM(data.frame(HSG, HPG, NKG), lag= 1, include = 'const')
+VECM(data.frame(HPG, HSG, NKG), lag= 1, include = 'const')
 ```
+# VAR model in difference using tsDyn
+```{r}
+VAR_diff_lag1 = lineVar(data = data_diff, lag = 1, include = 'const', model = 'VAR', I = 'diff')
+VAR_diff_lag1
+```
+```{r}
+m.lev <- as.matrix(data_non_diff)
+nr_lev <- nrow(data_non_diff)
+
+# tạo diff
+df.diff <- diff(as.matrix(data_non_diff), lag = 1)
+colnames(df.diff) <- c('d.HPG', 'd.HSG', 'd.NKG')
+m.diff <- as.matrix(df.diff)
+
+# estimation
+vare_diff <- VAR(df.diff, p = 1, type = 'const')
+
+# forecast of differenced data
+varf_diff <- predict(vare_diff, n.ahead = 10)
+x11(); par(mai=rep(0.4,4)); plot(varf_diff)
+x11(); par(mai=rep(0.4,4)); fanchart(varf_diff)
+
+# recover lev forecast
+m.varf_lev_ft <- rbind(m.lev, matrix(NA, 10, 3))
+m.ft_df <- do.call(cbind,lapply(varf_diff$fcst, function(x) x[,'fcst']))
+
+# growth to level
+for(h in (nr_lev+1):(nr_lev + 10)) {
+    hf <- h - nr_lev
+    m.varf_lev_ft[h,] <- m.varf_lev_ft[h-1,] + m.ft_df[hf,]
+}
+
+# Draw Graph
+
+x11(width=8, height = 8);
+par(mfrow=c(3,1), mar=c(2,2,2,2))
+
+for(i in 1:3) {
+    df <- m.varf_lev_ft[,i]
+    matplot(df, type=c('l'), col = c('blue'))
+    abline(v=nr_lev, col='blue')
+}
+```
+```{r}
+accuracy(var_diff_lag1$varresult[[1]])
+```
+```{r}
+accuracy(var_diff_lag1$varresult[[2]])
+```
+```{r}
+accuracy(var_diff_lag1$varresult[[3]])
+```
+```{r}
+testdata <- read_excel("C:\\Users\\ADMIN\\RProjects\\Viet_Nam_Steel_stock_analysis-Time-Series-\\Stock Price - HSG - test.xlsx")
+p <- predict(var_diff_lag1, n.ahead= 10)
+```
+```{r}
+HSG_test <- testdata$`<Close>`
+```
+```{r}
+rmse(m.varf_lev_ft[500:509,2], HSG_test)
+mape(m.varf_lev_ft[500:509,2], HSG_test) * 100
+```
+
+
+
 Now, click the **Run** button on the chunk toolbar to [execute](https://www.jetbrains.com/help/pycharm/r-markdown.html#run-r-code) the chunk code. The result should be placed under the chunk.
 Click the **Knit and Open Document** to build and preview an output.
