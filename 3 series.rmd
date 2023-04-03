@@ -143,9 +143,10 @@ vare_diff <- VAR(df.diff, p = 1, type = 'const')
 
 # forecast of differenced data
 varf_diff <- predict(vare_diff, n.ahead = 10)
-x11(); par(mai=rep(0.4,4)); plot(varf_diff)
-x11(); par(mai=rep(0.4,4)); fanchart(varf_diff)
-
+plot(varf_diff)
+fanchart(varf_diff)
+```
+```{r}
 # recover lev forecast
 m.varf_lev_ft <- rbind(m.lev, matrix(NA, 10, 3))
 m.ft_df <- do.call(cbind,lapply(varf_diff$fcst, function(x) x[,'fcst']))
@@ -158,14 +159,18 @@ for(h in (nr_lev+1):(nr_lev + 10)) {
 
 # Draw Graph
 
-x11(width=8, height = 8);
-par(mfrow=c(3,1), mar=c(2,2,2,2))
-
 for(i in 1:3) {
-    df <- m.varf_lev_ft[,i]
-    matplot(df, type=c('l'), col = c('blue'))
-    abline(v=nr_lev, col='blue')
+    df <- ts(m.varf_lev_ft[1:499,i], start = 2021, frequency = 250)
+    forecast_df <- ts(m.varf_lev_ft[500:509,i], start = 2023, frequency = 250)
+
+    plot(df, main="VAR model ~ time")
+    lines(forecast_df, col = c('blue'))
+    legend("topleft", legend=c("Actual", "Forecast 2023"),
+       col=c("black", "blue"), lty=1:2, cex=0.8)
 }
+```
+```{r}
+ts(m.varf_lev_ft[1:499,1], start = c(1, 1), end = c(2, 249))
 ```
 ```{r}
 var_diff_lag1$varresult
