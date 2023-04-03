@@ -106,6 +106,9 @@ plot(predict(var_diff_lag1))
 irf(var_diff_lag1)
 ```
 ```{r}
+irf(var_diff_lag1)
+```
+```{r}
 plot(irf(var_diff_lag1))
 ```
 # FEDV
