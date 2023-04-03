@@ -168,24 +168,36 @@ for(i in 1:3) {
 }
 ```
 ```{r}
+var_diff_lag1$varresult
+```
+```{r}
+# HPG
 accuracy(var_diff_lag1$varresult[[1]])
 ```
 ```{r}
+# HSG
 accuracy(var_diff_lag1$varresult[[2]])
 ```
 ```{r}
+# NKG
 accuracy(var_diff_lag1$varresult[[3]])
 ```
 ```{r}
-testdata <- read_excel("C:\\Users\\ADMIN\\RProjects\\Viet_Nam_Steel_stock_analysis-Time-Series-\\Stock Price - HSG - test.xlsx")
-p <- predict(var_diff_lag1, n.ahead= 10)
+HPG_test <- read_excel("C:\\Users\\ADMIN\\RProjects\\Viet_Nam_Steel_stock_analysis-Time-Series-\\Stock Price - HPG - test.xlsx")
+HSG_test <- read_excel("C:\\Users\\ADMIN\\RProjects\\Viet_Nam_Steel_stock_analysis-Time-Series-\\Stock Price - HSG - test.xlsx")
+NKG_test <- read_excel("C:\\Users\\ADMIN\\RProjects\\Viet_Nam_Steel_stock_analysis-Time-Series-\\Stock Price - NKG - test.xlsx")
 ```
 ```{r}
-HSG_test <- testdata$`<Close>`
+rmse(m.varf_lev_ft[500:509,1], HPG_test$`<Close>`)
+mape(m.varf_lev_ft[500:509,1], HPG_test$`<Close>`) * 100
 ```
 ```{r}
-rmse(m.varf_lev_ft[500:509,2], HSG_test)
-mape(m.varf_lev_ft[500:509,2], HSG_test) * 100
+rmse(m.varf_lev_ft[500:509,2], HSG_test$`<Close>`)
+mape(m.varf_lev_ft[500:509,2], HSG_test$`<Close>`) * 100
+```
+```{r}
+rmse(m.varf_lev_ft[500:509,3], NKG_test$`<Close>`)
+mape(m.varf_lev_ft[500:509,3], NKG_test$`<Close>`) * 100
 ```
 
 
