@@ -1,0 +1,158 @@
+---
+title: "Stock price forecast group"
+output: html_document
+date: "2023-03-24"
+---
+
+```{r setup, include=FALSE}
+library(Hmisc)
+library(tidyverse)
+library(Metrics)
+library(readr)
+library(astsa)
+library(lubridate)
+library(tseries)
+library(forecast)
+library(urca)
+library(readxl)
+source_functions <- function(fcn_names, file_name) {
+    env <- new.env()
+    source(file_name, local = env)
+    for ( i in 1:length(fcn_names) ) {
+        assign(fcn_names[i], get(fcn_names[i], envir = env), envir = .GlobalEnv)
+    }
+}
+source_functions("interp_urdf", "Interprete urdf.R")
+ls()
+plot_arima <- function(model) {
+  plot(forecast(model, h = 10))
+  lines(fitted(model), col = "red")
+  lines(ts_test, col = "green")
+  lines(forecast(model, h = 10)$mean)
+}
+evaluate_arima <- function(model) {
+  autoplot(model)
+  checkresiduals(model)
+}
+rmse_mape_all <- function(model) {
+  print("RMSE MAPE on all observations")
+  print(rmse(ts_closing, fitted(model)))
+  print(mape(ts_closing, fitted(model)))
+}
+  
+rmse_mape_last_10 <- function(model) {
+  
+  print("RMSE MAPE on last observations")
+  print(rmse(ts_closing[(length(ts_closing) - 9): length(ts_closing)], fitted(model)[(length(ts_closing) - 9): length(ts_closing)]))
+  print(mape(ts_closing[(length(ts_closing) - 9): length(ts_closing)], fitted(model)[(length(ts_closing) - 9): length(ts_closing)]))
+}
+rmse_mape_test_10 <-function(model) {
+  print("RMSE MAPE on forecasted 10 first days of 2023")
+  prediction<- forecast(model, h = 10)$mean
+  print(rmse(ts_test[1:10], prediction))
+  print(mape(ts_test[1:10], prediction))
+}
+```
+# Import data
+```{r}
+train <- read_excel("C:/Users/LeHuyPhong/Downloads/Train_NKG.xlsx", col_names = FALSE) #use 2 years 2021 and 2022 to train model
+nkg_2023 <- read_excel("C:/Users/LeHuyPhong/Downloads/Test_NKG.xlsx", col_names = FALSE)
+ts_closing <- ts(train, start = 2021, frequency = 250)
+ts_test <- ts(nkg_2023, start = 2023, frequency = 250)
+```
+
+# Step 1: Check for stationarity
+## 1.1 Graph the series to quickly detect non-stationarity
+```{r}
+plot(ts_closing)
+lines(ts_test, col = "green")
+```
+
+## 1.2 Augmented Dickey-fuller test:
+
+Test with trend and constant (H1: stationary around trend) \
+if trend is insignificant: Test with constant (H1: stationary around constant)\
+if constant is insignificant: Test without constant (H1: stationary around 0)\
+
+Note: \ 
+if trend significant -> detrend series (by diff or others) \
+if constant significant -> set include.constant in Arima (package forecast) \
+```{r}
+test_trend <- ur.df(ts_closing, type = "trend", lag = 0)
+summary(test_trend)
+interp_urdf(test_trend)
+```
+
+```{r}
+test_drift <- ur.df(diff(ts_closing), type = "drift", lag = 0) 
+summary(test_drift)
+interp_urdf(test_drift)
+```
+```{r}
+test_stationarity <- ur.df(diff(ts_closing), type = "none", lag = 0) 
+summary(test_stationarity)
+interp_urdf(test_stationarity)
+```
+
+-> with 1 diff, The series is stationary around constant -> d = 1
+
+# Step 2: determine order for AR and MA (p, q) by checking acf and pacf
+Guide: \
+Auto regressive (AR) process (p): Order p is the lag value after which PACF plot crosses the upper confidence interval for the first time. \
+Moving average (MA) process(q): Order q of the MA process is obtained from the ACF plot, this is the lag after which ACF crosses the upper confidence interval for the first time.\
+```{r}
+acf(diff(ts_closing))
+pacf(diff(ts_closing))
+```
+auto arima to search for optimize number for p d q
+```{r}
+fit <- auto.arima(ts_closing,max.p = 5,max.q = 5,max.P = 5,max.Q = 5,max.d = 5,seasonal = TRUE,ic = 'aic')
+fit
+```
+First guess ARIMA(0, 1, 1)
+```{r}
+test_2_diff <- ur.df(diff(diff(ts_closing)), type = "drift", lag = 0)
+summary(test_2_diff)
+interp_urdf(test_2_diff)
+```
+```{r}
+test_2_diff <- ur.df(diff(diff(ts_closing)), type = "none", lag = 0)
+summary(test_2_diff)
+interp_urdf(test_2_diff)
+```
+
+```{r}
+acf(diff(diff(ts_closing)))
+pacf(diff(diff(ts_closing)))
+```
+# Step 3: fit model
+```{r}
+arima011 <- Arima(ts_closing, order = c(0, 1, 1), include.constant = TRUE)
+summary(arima011 )
+```
+
+# Step 4: Evaluate model
+## Inversed roots are inside the unit circle
+## insignificant coefficient -> remove
+## Serial correlation -> add more AR (p)
+## Not white noise residuals -> add more MA (q)
+```{r}
+evaluate_arima(arima011 )
+```
+```{r}
+plot_arima(arima011)
+```
+```{r}
+rmse_mape_all(arima011)
+rmse_mape_last_10(arima011)
+rmse_mape_test_10(arima011)
+```
+
+Good model: Great R-square, log likelihood.\
+Small AIC, BIC, HQ forecast error (RMSE, MAPE)\
+
+
+```{r}
+autoplot(arima011)
+checkresiduals(arima011)
+```

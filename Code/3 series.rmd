@@ -38,11 +38,19 @@ HPG <- HPG_train$`<Close>`
 NKG <- NKG_train$`<Close>`
 ```
 ```{r}
-summary(ca.jo(data.frame(HSG, HPG, NKG), type = 'trace'))
+HPG.d <- diff(HPG)
+HSG.d <- diff(HSG)
+NKG.d <- diff(NKG)
+data_diff <- data.frame(HPG.d, HSG.d, NKG.d)
+data_non_diff <- data.frame(HPG, HSG, NKG)
 ```
 ```{r}
-summary(ca.jo(data.frame(HSG, HPG, NKG), type = 'eigen'))
+summary(ca.jo(data.frame(HPG, HSG, NKG), type = 'trace'))
 ```
+```{r}
+summary(ca.jo(data.frame(HPG, HSG, NKG), type = 'eigen'))
+```
+
 # lambda_trace
           test 10pct  5pct  1pct
 r <= 1 | 15.83 15.66 17.95 23.52
@@ -57,13 +65,24 @@ r = 0  | 20.35 18.90 21.07 25.75
 
 r = 0:  test = 20.35 > 21.07  -> Not reject H0: Number of cointegrate = 0
 
+```{r}
+summary(ur.df(s, type = 'none')) # stationary
+```
 
 ```{r}
-summary(lm(HPG ~ HSG + NKG))
+summary(lm(HSG ~ HPG + NKG))
 ```
 ```{r}
-resid.HPG <- resid(summary(lm(HPG ~ HSG + NKG)))
+resid.HPG <- resid(lm(HPG ~ HSG + NKG))
 summary(ur.df(resid.HPG, type = 'none'))
+```
+```{r}
+resid1 <- resid(lm(HSG ~ HPG + NKG))
+summary(ur.df(resid1, type = 'none'))
+```
+```{r}
+resid1 <- resid(lm(NKG ~ HSG + HPG ))
+summary(ur.df(resid1, type = 'none'))
 ```
 ```{r}
 summary(lm(diff(HPG) ~ diff(HSG) + diff(NKG) + resid.HPG[1:(length(resid.HPG) - 1)]))
@@ -84,6 +103,9 @@ data_non_diff <- data.frame(HPG, HSG, NKG)
 # grangertest(NKG.d ~ HPG.d, order = 1 )
 # grangertest(HSG.d ~ NKG.d, order = 1 )
 # grangertest(NKG.d ~ HSG.d, order = 1 )
+```
+```{r}
+grangertest(HPG.d ~ HSG.d, order = 1 )
 ```
 ```{r}
 var_diff_lag1 <- VAR(data_diff, p= 1, type = 'const')
@@ -176,9 +198,6 @@ for(i in 1:3) {
 ts(m.varf_lev_ft[1:499,1], start = c(1, 1), end = c(2, 249))
 ```
 ```{r}
-var_diff_lag1$varresult
-```
-```{r}
 # HPG
 accuracy(var_diff_lag1$varresult[[1]])
 ```
@@ -206,6 +225,15 @@ mape(m.varf_lev_ft[500:509,2], HSG_test$`<Close>`) * 100
 ```{r}
 rmse(m.varf_lev_ft[500:509,3], NKG_test$`<Close>`)
 mape(m.varf_lev_ft[500:509,3], NKG_test$`<Close>`) * 100
+```
+```{r}
+mape(fitted(var_diff_lag1)[,1],lag(HPG.d)[2:498])
+```
+```{r}
+mape(fitted(var_diff_lag1)[488:497,2], lag(HSG.d)[489:498])
+```
+```{r}
+accuracy(var_diff_lag1$varresult[[1]])
 ```
 
 
